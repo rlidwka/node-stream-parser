@@ -152,6 +152,28 @@ describe('Transform stream', function () {
       t.resume();
     });
 
+    it('should run callback immediately if skipping/buffering 0 bytes', function (done) {
+      var t = new Transform();
+      var data = 'test';
+      Parser(t);
+
+      // buffer 4 bytes (all input data)
+      t._bytes(4, function () {
+
+        // make sure all those callbacks are executed properly
+        t._passthrough(0, function () {
+          t._skipBytes(0, function () {
+            t._bytes(0, function () {
+              done();
+            });
+          });
+        });
+      });
+
+      t.end(data);
+      t.resume();
+    });
+
     it('should work switching between async and sync callbacks', function (done) {
       var firstCalled, secondCalled, thirdCalled;
 

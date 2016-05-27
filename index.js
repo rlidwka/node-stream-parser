@@ -95,12 +95,17 @@ function init (stream) {
 
 function _bytes (n, fn) {
   assert(!this._parserCallback, 'there is already a "callback" set!');
-  assert(isFinite(n) && n > 0, 'can only buffer a finite number of bytes > 0, got "' + n + '"');
+  assert(isFinite(n) && n >= 0, 'can only buffer a finite number of bytes >= 0, got "' + n + '"');
+  n = Number(n);
   if (!this._parserInit) init(this);
   debug('buffering %o bytes', n);
   this._parserBytesLeft = n;
   this._parserCallback = fn;
   this._parserState = BUFFERING;
+
+  // if we need to buffer 0 bytes exactly, emulate zero-length input data,
+  // so callback will be executed immediately
+  if (n === 0) data(this, Buffer(0), function () {}, function () {});
 }
 
 /**
@@ -114,12 +119,17 @@ function _bytes (n, fn) {
 
 function _skipBytes (n, fn) {
   assert(!this._parserCallback, 'there is already a "callback" set!');
-  assert(n > 0, 'can only skip > 0 bytes, got "' + n + '"');
+  assert(n >= 0, 'can only skip >= 0 bytes, got "' + n + '"');
+  n = Number(n);
   if (!this._parserInit) init(this);
   debug('skipping %o bytes', n);
   this._parserBytesLeft = n;
   this._parserCallback = fn;
   this._parserState = SKIPPING;
+
+  // if we need to skip 0 bytes exactly, emulate zero-length input data,
+  // so callback will be executed immediately
+  if (n === 0) data(this, Buffer(0), function () {}, function () {});
 }
 
 /**
@@ -133,12 +143,17 @@ function _skipBytes (n, fn) {
 
 function _passthrough (n, fn) {
   assert(!this._parserCallback, 'There is already a "callback" set!');
-  assert(n > 0, 'can only pass through > 0 bytes, got "' + n + '"');
+  assert(n >= 0, 'can only pass through >= 0 bytes, got "' + n + '"');
+  n = Number(n);
   if (!this._parserInit) init(this);
   debug('passing through %o bytes', n);
   this._parserBytesLeft = n;
   this._parserCallback = fn;
   this._parserState = PASSTHROUGH;
+
+  // if we need to pass 0 bytes exactly, emulate zero-length input data,
+  // so callback will be executed immediately
+  if (n === 0) data(this, Buffer(0), function () {}, function () {});
 }
 
 /**
@@ -188,7 +203,7 @@ function transform (chunk, output, fn) {
  */
 
 function _data (stream, chunk, output, fn) {
-  if (stream._parserBytesLeft <= 0) {
+  if (stream._parserState === INIT) {
     return fn(new Error('got data but not currently parsing anything'));
   }
 
